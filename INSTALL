@@ -1,0 +1,5 @@
+Installation Instructions
+=========================
+
+Simply copy `emacs-from-source` to a directory on your PATH. Type
+`emacs-from-source --help` for usage.

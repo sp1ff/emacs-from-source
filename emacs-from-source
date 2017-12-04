@@ -1,0 +1,597 @@
+#!/usr/bin/env bash
+CE_VERSION=0.0.1
+CE_INSTALL=/opt/emacsen
+
+# get_os: guess the platform on which we're running
+# invoke as: x=$(get_os) x will be one of "MacOS", "Ubuntu" or "RHEL"
+# I'm not distinguishing among OS versions until I need to.
+function get_os()
+{
+    case $(uname -s) in
+        Darwin)
+            echo "MacOS";;
+        Linux)
+            if test -f /etc/lsb-release; then
+                echo "Ubuntu"
+            elif test -f /etc/redhat-release; then
+                echo "RHEL"
+            else
+                echo "Unsupported system" >&2
+                exit 1
+            fi;;
+        *)
+            echo "Unsupported system" >&2;
+            exit 1;;
+    esac
+}
+
+# install_pre_requisites
+# invoke as: install_pre_requisites
+function install_pre_requisites ()
+{
+    echo "Installing pre-requisites..." >&6
+
+    local os=$(get_os)
+    case $os in
+        MacOS)
+            set +e
+            x=$(xcode-select --install 2>&1)
+            if [ $? -ne 0 ]; then
+                case $x in
+                    xcode-select*already?installed*)
+                        ;;
+                    *)
+                        echo $x >&2;
+                        exit 1;;
+                esac
+            fi
+            set -e
+            brew install autoconf automake gnutls lmdb openssl texinfo;;
+        Ubuntu)
+            set -e
+            sudo apt-get install -y build-essential;
+            sudo apt-get -y build-dep emacs24;
+            sudo apt-get install -y libwebkitgtk-dev libwebkitgtk-3.0-dev;;
+        RHEL)
+            set -e
+            sudo yum install -y autoconf automake make gcc-c\+\+ \
+                 gnutls-devel ncurses texinfo;;
+        *)
+            echo "Internal error in install_pre_requisites" >&2;
+            exit 1;;
+    esac
+
+    echo "Installing pre-requisites...done." >&6
+}
+
+# print_alises: print alias statements for `emacs' & `emacsclient'
+# invoke as print_alises $install_dir $version
+function print_aliases ()
+{
+    local install_dir="$1"
+    local version="$2"
+    echo alias emacs=$install_dir/$version/bin/emacs\; alias emacsclient=$install_dir/$version/bin/emacsclient
+}
+
+# compile_emacs
+# invoke as: compile_emacs $source_directory $install_directory
+function compile_emacs ()
+{
+    local srcdir=$1
+    local instdir=$2
+
+    echo "Compiling Emacs in $srcdir..." >&6
+
+    set -e
+    cd $srcdir
+
+    local os=$(get_os)
+    case $os in
+        MacOS)
+            (echo $PATH|grep -q /usr/local/opt/texinfo/bin)|| export PATH="/usr/local/opt/texinfo/bin:$PATH"
+            ./autogen.sh;
+            ./configure --with-ns;
+            make bootstrap;
+            make;;
+        Ubuntu|RHEL)
+            ./autogen.sh;
+            ./configure --prefix="$instdir";
+            make bootstrap;
+            make;;
+        *)
+            echo "Internal error in compile_emacs." >&2;
+            exit 1;;
+    esac
+
+    echo "Compiling Emacs in $srcdir...done." >&6
+}
+
+# install_emacs: install multiple versions of Emacs side-by-side
+#invoke as: install_emacs $install_root $version
+function install_emacs ()
+{
+    local install_dir=$1
+    local version=$2
+
+    echo "Installing Emacs to $install_dir/$version..." >&6
+
+    local os=$(get_os)
+    case $os in
+        MacOS)
+            make install;
+            sudo mkdir -p $install_dir/$version;
+            sudo cp -R nextstep/Emacs.app $install_dir/$version;
+            exit 1;;
+        Ubuntu|RHEL)
+            sudo make install;
+        *)
+            echo "Internal error in compile_emacs." >&2;
+            exit 1;;
+    esac
+
+    echo "Installing Emacs to $install_dir/$version...done." >&6
+
+    print_aliases $install_dir $version
+}
+
+#
+# update_emacs: update the emacs checkout directory
+# invoke as: update_emacs $srcdir $branch
+function update_emacs ()
+{
+    local srcdir=$1
+    local branch=$2
+
+    echo "Updating Emacs in $srcdir..." >&6
+
+    set -e
+    cd $srcdir
+    case $(git branch --no-color) in
+        \*?$branch)
+        ;;
+        *)
+            git checkout -b $branch;;
+    esac
+
+    # http://ergoemacs.org/emacs/building_emacs_from_git_repository.html
+    git reset --hard
+    git clean -xdf
+    git pull
+    echo "Updating Emacs in $srcdir...done." >&6
+}
+
+# bootstrap: install a built-from-source Emacs starting from scratch
+# invoke as: bootstrap $@
+function bootstrap ()
+{
+    local boot_co_name=emacs
+    local boot_force=false
+    local boot_help=
+    local boot_install=$CE_INSTALL
+    local boot_prev_option=
+    local boot_srcdir=
+    local boot_option=
+    for boot_option
+    do
+        # If the previous option required an argument, assign it now.
+        if test -n "$boot_prev_option"; then
+            eval $boot_prev_option=\$boot_option
+            boot_prev_option=
+            continue
+        fi
+
+        # Parse out the argument option, in $boot_option
+        case $boot_option in
+            *=?*) boot_optarg=$(expr "X$boot_option" : '[^=]*=\(.*\)') ;;
+            *=)   boot_optarg= ;;
+            *)    boot_optarg=yes ;;
+        esac
+
+        # Handle options here
+        case $boot_option in
+            -d | --checkout-name | --name)
+                boot_prev_option=boot_co_name;;
+            -d=* | --checkout-name=* | --name=*)
+                boot_co_name=$boot_optarg;;
+            -f | --force)
+                boot_force=:;;
+            -h | --help | --hel)
+                boot_help=yes;;
+            -i | --install | --inst)
+                boot_prev_option=boot_install;;
+            -i=* | --install=* | --inst=*)
+                boot_install=$boot_optarg;;
+            -s | --srcdir | --src)
+                boot_prev_option=boot_srcdir;;
+            -s=* | --srcdir=* | --src=*)
+                boot_srcdir=$boot_optarg;;
+            *)
+                echo "unrecognized option: \`$boot_option'
+Try \`$0 bootstrap --help' for more information" >&2;
+                set +e
+                exit 2;;
+        esac
+    done
+
+    if test "$boot_help" = "yes"; then
+        cat <<EOF
+\`$0 bootstrap' installs a built-from-scratch Emacs starting from scratch.
+
+Usage $0 bootstrap [OPTION]...
+
+Bootstrap options:
+
+  -s, --srcdir=DIRNAME    parent directory under which the Emacs source shall be
+                          checked out
+  -d, --name=DIRNAME      name to use for the checkout directory (default: "emacs")
+  -i, --install           directory into which multiple Emacsen shall be installed
+  -f, --force             force a checkout even if the directory to which the Emacs
+                          source would be checked out exists (it will be destroyed
+                          and re-created).
+EOF
+        exit 0
+    fi
+
+    if test -z "$boot_srcdir"; then
+        echo "No --srcdir specified." >&2
+        exit 2
+    fi
+
+    cat >&6 <<EOF
+===========================================================================
+bootstrapping to $boot_srcdir:
+
+  - the checkout directory will be $boot_co_name
+EOF
+
+    set -e
+    test -d $boot_srcdir || mkdir -p $boot_srcdir
+    if test -d $boot_srcdir/$boot_co_name; then
+        if $boot_force; then
+            cat >&6 <<EOF
+  - this directory exists, but will be re-created due to the --force flag.
+EOF
+            rm -rf $boot_srcdir/$boot_co_name
+        else
+            cat >&6 <<EOF
+  - there is already a directory named $boot_co_name in this directory; use
+    --force to force its removal & recreation-- exiting.
+===========================================================================
+EOF
+            exit 1
+        fi
+    fi
+
+    cat >&6 <<EOF
+  - the install directory will be $boot_install/HEAD
+EOF
+
+    if test -d $boot_install/HEAD; then
+        if $boot_force; then
+            cat >&6 <<EOF
+  - this directory exists, but will be re-created due to the --force flag.
+===========================================================================
+
+EOF
+            rm -rf $boot_install/HEAD
+        else
+            cat >&6 <<EOF
+  - there is already a directory named HEAD in this directory; use
+    --force to force its removal & recreation-- exiting.
+===========================================================================
+
+EOF
+            exit 1
+        fi
+    fi
+
+            cat >&6 <<EOF
+===========================================================================
+EOF
+    sudo mkdir -p $boot_install/HEAD
+    install_pre_requisites
+    cd $boot_srcdir
+    git clone git://git.sv.gnu.org/emacs.git $boot_co_name
+    compile_emacs $boot_srcdir/$boot_co_name $boot_install/HEAD
+    install_emacs $boot_install HEAD
+}
+
+# define_aliases: print aliases for emacs & emacsclient
+# invoke as: define_aliaes $@
+function define_aliases()
+{
+    local als_help=false
+    local als_install=$CE_INSTALL
+    local als_name="HEAD"
+    local als_prev_option=
+    local als_option
+
+    for als_option
+    do
+
+        # If the previous option required an argument, assign it now.
+        if test -n "$als_prev_option"; then
+            eval $als_prev_option=\$als_option
+            als_prev_option=
+            continue
+        fi
+
+        # Parse out the argument option, in $up_option
+        case $als_option in
+            *=?*) als_optarg=$(expr "X$als_option" : '[^=]*=\(.*\)') ;;
+            *=)   als_optarg= ;;
+            *)    als_optarg=yes ;;
+        esac
+
+        # Handle options here
+        case $als_option in
+            -h | --help | --hel)
+                als_help=yes;;
+            -i | --install | --inst)
+                als_prev_option=als_install;;
+            -i=* | --install=* | --inst=*)
+                als_install=$als_optarg;;
+            *)
+                als_name=$als_option;;
+        esac
+
+    done
+
+    if test "$als_help" = "yes"; then
+        cat <<EOF
+\`$0 alias' prints aliases for `emacs' & `emacsclient' which will invoke the
+versions built from source.
+
+Usage eval `$0 aliases [OPTION]... [VERSION])`
+
+Options:
+
+  -i, --install           directory into which multiple Emacsen have be installed
+
+VERSION shall be the particular Emacs version to be invoked; if omitted,
+HEAD will be assumed.
+EOF
+        exit 0
+    fi
+
+    print_aliases $als_install $als_name
+
+}
+
+# update: update an extant repro, optionally re-build
+# invoke as: update $@
+function update ()
+{
+    local up_no_build=false
+    local up_help=
+    local up_install=$CE_INSTALL
+    local up_norebuild=false
+    local up_prev_option=
+    local up_srcdir=
+    local up_option
+    for up_option
+    do
+        # If the previous option required an argument, assign it now.
+        if test -n "$up_prev_option"; then
+            eval $up_prev_option=\$up_option
+            up_prev_option=
+            continue
+        fi
+
+        # Parse out the argument option, in $up_option
+        case $up_option in
+            *=?*) up_optarg=$(expr "X$up_option" : '[^=]*=\(.*\)') ;;
+            *=)   up_optarg= ;;
+            *)    up_optarg=yes ;;
+        esac
+
+        # Handle options here
+        case $up_option in
+            -h | --help | --hel)
+                up_help=yes;;
+            -n | --no-rebuild | --no-reb)
+                up_norebuild=yes;;
+            -i | --install | --inst)
+                up_prev_option=up_install;;
+            -i=* | --install=* | --inst=*)
+                up_install=$up_optarg;;
+            -s | --srcdir | --src)
+                up_prev_option=up_srcdir;;
+            -s=* | --srcdir=* | --src=*)
+                up_srcdir=$up_optarg;;
+            *)
+                echo "unrecognized option: \`$up_option'
+Try \`$0 bootstrap --help' for more information" >&2;
+                set +e
+                exit 2;;
+        esac
+    done
+
+    if test "$up_help" = "yes"; then
+        cat <<EOF
+\`$0 update' updates an extant emacs checkout & optionally re-builds.
+
+Usage $0 update [OPTION]...
+
+Bootstrap options:
+
+  -i, --install           directory into which multiple Emacsen shall be installed
+  -n, --no-rebuild        don't re-build
+  -s, --srcdir=DIRNAME    directory containing the Emacs source code
+EOF
+        exit 0
+    fi
+
+    if test -z "$up_srcdir"; then
+        echo "No --srcdir specified." >&2
+        exit 2
+    fi
+
+    set -e
+    if [ ! -d $up_srcdir ]; then
+        echo "$up_srcdir does not exist. Exiting." >&2
+        exit 2
+    fi
+    update_emacs $up_srcdir master
+
+    if test "$up_norebuild" = "yes"; then
+        return 0
+    fi
+
+    compile_emacs . $up_install/HEAD
+    install_emacs $up_install HEAD
+}
+
+# update: update an extant repro, checkout a tag, optionally re-build
+# invoke as: make_tag $@
+function make_tag ()
+{
+    local tag_no_build=false
+    local tag_help=
+    local tag_install=
+    local tag_name=
+    local tag_norebuild=false
+    local tag_prev_option=
+    local tag_srcdir=
+    local tag_option
+    for tag_option
+    do
+        # If the previous option required an argument, assign it now.
+        if test -n "$tag_prev_option"; then
+            eval $tag_prev_option=\$tag_option
+            tag_prev_option=
+            continue
+        fi
+
+        # Parse out the argument option, in $tag_option
+        case $tag_option in
+            *=?*) tag_optarg=$(expr "X$tag_option" : '[^=]*=\(.*\)') ;;
+            *=)   tag_optarg= ;;
+            *)    tag_optarg=yes ;;
+        esac
+
+        # Handle options here
+        case $tag_option in
+            -h | --help | --hel)
+                tag_help=yes;;
+            -i | --install | --inst)
+                tag_prev_option=tag_install;;
+            -i=* | --install=* | --inst=*)
+                tag_install=$tag_optarg;;
+            -n | --no-rebuild | --no-reb)
+                tag_norebuild=yes;;
+            -s | --srcdir | --src)
+                tag_prev_option=tag_srcdir;;
+            -s=* | --srcdir=* | --src=*)
+                tag_srcdir=$tag_optarg;;
+            *)
+                tag_name=$tag_option;;
+        esac
+    done
+
+    update_emacs $tag_srcdir $tag_name
+
+    if test "tag_norebuild" = "yes"; then
+        return 0
+    fi
+
+    compile_emacs $tag_srcdir $tag_install/$tag_name
+    install_emacs $tag_install $tag_name
+}
+
+# Parse the global options & sub-command
+ce_cmd=
+ce_help=
+ce_prev_option=
+ce_silent=false
+ce_version=false
+ce_nargs=0
+for ce_option
+do
+    # If the previous option required an argument, assign it now.
+    if test -n "$ce_prev_option"; then
+        eval $ce_prev_option=\$ce_option
+        ce_prev_option=
+        ce_nargs=$(($ce_nargs+1))
+        continue
+    fi
+
+    # Parse out the argument option, in $ce_option
+    case $ce_option in
+        *=?*) ce_optarg=$(expr "X$ce_option" : '[^=]*=\(.*\)') ;;
+        *=)   ce_optarg= ;;
+        *)    ce_optarg=yes ;;
+    esac
+
+    # Handle options here
+    case $ce_option in
+        -h | --help | --hel)
+            ce_help=yes;
+            ce_nargs=$(($ce_nargs+1));;
+        -s | -q | --silent | --silen | --quiet)
+            ce_silent=yes;
+            ce_nargs=$(($ce_nargs+1));;
+        -v | --version | --ver)
+            ce_version=:;
+            ce_nargs=$(($ce_nargs+1));;
+        -*)
+            echo "unrecognized option: \`$ce_option'
+Try \`$0 --help' for more information" >&2;
+            set +e
+            exit 2;;
+        *)
+            ce_cmd=$ce_option;
+            ce_nargs=$(($ce_nargs+1));
+            break;;
+    esac
+
+done
+
+if test "$ce_help" = "yes"; then
+
+    cat <<EOF
+\`$0' builds, installs and manages Emacsen built from source.
+
+This is $0 version $CE_VERSION.
+
+Usage $0 [OPTION]... COMMAND [OPTION...]
+
+Global options:
+
+  -h, --help              display this help and exit
+  -V, --version           display version information and exit
+  -q, --quiet, --silent
+
+Sub-commands are: aliases, bootstrap, tag, update
+
+Run "$0 COMMAND --help" for help on each sub-command.
+EOF
+    exit 0
+fi
+
+if $ce_version; then
+    cat <<EOF
+\`$0' $CE_VERSION
+EOF
+    exit 0
+fi
+
+exec 6>&1
+test "$ce_silent" = yes && exec 6>/dev/null
+
+shift $ce_nargs
+case $ce_cmd in
+    alias*)
+        define_aliases $@;;
+    bootstrap|init)
+        bootstrap $@;;
+    tag|version|release)
+        make_tag $@;;
+    update|up)
+        update $@;;
+    *)
+        echo "unrecognized command: \`$ce_cmd'
+Try \`$0 --help' for more information" >&2;
+        set +e
+        exit 2;;
+esac
