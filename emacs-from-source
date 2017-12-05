@@ -123,7 +123,7 @@ function install_emacs ()
             sudo cp -R nextstep/Emacs.app $install_dir/$version;
             exit 1;;
         Ubuntu|RHEL)
-            sudo make install;
+            sudo make install;;
         *)
             echo "Internal error in compile_emacs." >&2;
             exit 1;;
