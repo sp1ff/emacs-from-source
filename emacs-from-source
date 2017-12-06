@@ -70,7 +70,13 @@ function print_aliases ()
 {
     local install_dir="$1"
     local version="$2"
-    echo alias emacs=$install_dir/$version/bin/emacs\; alias emacsclient=$install_dir/$version/bin/emacsclient
+    local os=$(get_os)
+    case $os in
+        MacOS)
+			echo alias emacs=$install_dir/$version/Emacs.app/Contents/MacOS/Emacs\;alias emacsclient=$install_dir/$version/Emacs.app/Contents/MacOS/bin/emacsclient;;
+		*)
+			echo alias emacs=$install_dir/$version/bin/emacs\; alias emacsclient=$install_dir/$version/bin/emacsclient;;
+	esac
 }
 
 # compile_emacs
