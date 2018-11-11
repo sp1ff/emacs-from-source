@@ -1,3 +1,37 @@
-emacs-from-source News
+emacs-from-source News -- history of user-visible changes.
 
-No news.
+Copyright (C) 2017-2018 Michael Herstine <sp1ff@pobox.com>
+
+
+* Changes in emacs-from-source 1.0.1
+
+** Improved error handling
+
+Assorted changes throughout to catch & report on more errors. Also
+fixed a few copy-n-paste errors in help messages.
+
+** Update to buld on Emacs Mojave
+Apple changed the location of libxml2.
+
+** Bugfix
+`install_emacs' would exit with status one even on successful
+install-- fixed.
+
+** Re-wrote the logic for branch & tag handling
+The previous logic for updating to a branch just didn't work; that has
+been fixed.
+
+The previous scheme didn't tag the install directory with the git
+commit from which it had been built, making upgrading difficult.
+
+** Added a new sub-command `make-current'
+Pursuant to the above, the program now manages a symlink in the
+install directory named "current", `emacs-from-source make-current'
+will change that symlink to point to different versions of Emacs.
+
+
+Local variables:
+coding: utf-8
+mode: outline
+paragraph-separate: "[ 	]*$"
+end:
