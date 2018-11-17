@@ -3,6 +3,16 @@ emacs-from-source News -- history of user-visible changes.
 Copyright (C) 2017-2018 Michael Herstine <sp1ff@pobox.com>
 
 
+* Changes in emacs-from-source 1.1.1
+
+** Added a sub-command `revert'
+
+`make-current' will not only create a new symlink, but will link to
+the last "current" build. `emacs-from-source revert' will symlink to
+the last "current" build & create a new link "bad" pointing to the
+previous "current" build.
+
+
 * Changes in emacs-from-source 1.0.1
 
 ** Improved error handling

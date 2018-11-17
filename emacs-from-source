@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copyright (C) 2017-2018 Michael Herstine <sp1ff@pobox.com>
-CE_VERSION=1.0.1
+CE_VERSION=1.1.1
 CE_INSTALL=/opt/emacsen
 
 #############################################################################
@@ -55,8 +55,9 @@ function install_pre_requisites ()
         Ubuntu)
             set -e
             sudo apt-get install -y build-essential;
-            sudo apt-get -y build-dep emacs24;
-            sudo apt-get install -y libwebkitgtk-dev libwebkitgtk-3.0-dev;;
+            sudo apt-get -y build-dep emacs24;;
+            # TODO(sp1ff): still required?
+            # sudo apt-get install -y libwebkitgtk-dev libwebkitgtk-3.0-dev;
         RHEL)
             set -e
             sudo yum install -y autoconf automake make gcc-c\+\+ \
@@ -699,8 +700,82 @@ EOF
         exit 2
     fi
 
-    sudo rm -f $mc_install/current
+    if test -L $mc_install/current; then
+        sudo rm -f $mc_install/last
+        sudo ln -s $(readlink $mc_install/current) $mc_install/last
+        sudo rm    $mc_install/current
+    fi
     sudo ln -s $mc_install/$mc_target $mc_install/current
+}
+
+function revert_to_last ()
+{
+    local rtl_help=false
+    local rtl_install=$CE_INSTALL
+
+    local rtl_option=
+    local rtl_prev_option=
+    for rtl_option
+    do
+
+        # If the previous option required an argument, assign it now.
+        if test -n "$rtl_prev_option"; then
+            eval $rtl_prev_option=\$rtl_option
+            rtl_prev_option=
+            continue
+        fi
+
+        # Parse out the argument option, in $up_option
+        case $rtl_option in
+            *=?*) rtl_optarg=$(expr "X$rtl_option" : '[^=]*=\(.*\)') ;;
+            *=)   rtl_optarg= ;;
+            *)    rtl_optarg=yes ;;
+        esac
+
+        # Handle options here
+        case $rtl_option in
+            -h | --he | --hel | --help)
+                rtl_help=yes;;
+            -i | --install | --inst)
+                rtl_prev_option=rtl_install;;
+            -i=* | --install=* | --inst=*)
+                rtl_install=$rtl_optarg;;
+            *)
+                echo "unrecognized argument: \`$rtl_option'
+Try \`$0 revert --help for more information" >&2;
+                set +e
+                exit 2;;
+        esac
+
+    done
+
+    if test "$rtl_help" == "yes"; then
+        cat <<EOF
+\`$0 revert moves the symlink named "current" in the install directory to the
+target of "last". A symlink named "bad" is set to the previous target of
+"current"
+
+Usage: \`$0 revert [OPTION...]
+
+Options:
+
+  -h, --help:    print this message & exit with status zero
+  -i, --install: directory into which multiple Emacsen have been installed
+                 (default: $CE_INSTALL)
+EOF
+        exit 0
+    fi
+
+    set -e
+
+    sudo rm -f $rtl_install/bad
+    sudo ln -s $(readlink $rtl_install/current) $rtl_install/bad
+    sudo rm -f $rtl_install/current
+    sudo ln -s $(readlink $rtl_install/last) $rtl_install/current
+    sudo rm -f $rtl_install/last
+
+    echo "current is now $(readlink $rtl_install/current)."
+
 }
 
 #############################################################################
@@ -769,7 +844,7 @@ Global options:
   -q, --quiet    display no output
   -V, --version  display version information and exit
 
-Sub-commands are: aliases, bootstrap, update & make-current.
+Sub-commands are: aliases, bootstrap, update, make-current & revert.
 
 Run \`$0 COMMAND --help' for help on each sub-command.
 EOF
@@ -796,6 +871,8 @@ case $ce_cmd in
         update $@;;
     make-current)
         make_current $@;;
+    revert|fallback)
+        revert_to_last $@;;
     *)
         echo "unrecognized sub-command: \`$ce_cmd'
 Try \`$0 --help' for more information" >&2;

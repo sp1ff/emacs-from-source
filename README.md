@@ -1,7 +1,7 @@
 emacs-from-source
 =================
 
-This directory contains release 1.0.1 of `emacs-from-source`.
+This directory contains release 1.1.1 of `emacs-from-source`.
 
 See the file NEWS for user-visible changes from previous releases.
 
@@ -22,7 +22,7 @@ What is it?
 
 `emacs-from-source` is a [Bash](https://www.gnu.org/software/bash/)
 shell script for bootstrapping, compiling & managing multiple versions
-of [Emacs](https://www.gnu.org/software/emacs/) compiled from source.
+of [Emacs](https://www.gnu.org/software/emacs/), compiled from source.
 
 To bootstrap your installation, do:
 
@@ -51,11 +51,12 @@ To bootstrap your installation, do:
 This will leave you with the
 [Emacs](https://www.gnu.org/software/emacs/) git repo checked out to
 master/HEAD in `/tmp/emacs`, and the compiled binaries installed in
-`/opt/emacsen/abb033ed7d244252d04911f5c6fd` .abb033ed7d244252d04911f5c6fd
+`/opt/emacsen/abb033ed7d244252d04911f5c6fd`. `abb033ed7d244252d04911f5c6fd`
 names the most recent git commit on master in the git repo; i.e. the
-commit from which you built. This is inconvenient to type, so
-do `emacs-from-source make-current abb033ed7d244252d04911f5c6fd`; this
-will create a symlink `/opt/emacsen/current -> abb033ed7d244252d04911f5c6fd`.
+commit from which you built. This is inconvenient to type, so do
+`emacs-from-source make-current abb033ed7d244252d04911f5c6fd`; this
+will create a symlink `/opt/emacsen/current ->
+abb033ed7d244252d04911f5c6fd`.
 
 To try out a particular release, do:
 
@@ -84,10 +85,18 @@ your `.bashrc`:
 
 Once you settle on one, you may want to do:
 
-   emacs-from-source make-current X
-    eval `emacs-from-source aliases -b foo 623d37a...`
-	# Will output
-	# alias emacs=/opt/emacsen/current/bin/emacs; alias emacsclient=/opt/emacsen/current/bin/emacsclient
+   emacs-from-source make-current XYZ
+   # This will create a symlink /opt/emacsen/current -> /opt/emacsen/XYZ
+   # and /opt/emacsen/last -> <whatever curent points to now>
+   eval `emacs-from-source alias XYZ`
+   # Will output
+   # alias emacs=/opt/emacsen/current/bin/emacs; alias emacsclient=/opt/emacsen/current/bin/emacsclient
+
+If that doesn't work out:
+
+    emacs-from-source revert
+	# Will swap /opt/emacsen/current to /opt/emacsen/last
+
 
 Downloading
 -----------
