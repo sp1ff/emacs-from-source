@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Copyright (C) 2017-2018 Michael Herstine <sp1ff@pobox.com>
-CE_VERSION=1.1.1
+# Copyright (C) 2017-2019 Michael Herstine <sp1ff@pobox.com>
+CE_VERSION=1.1.2
 CE_INSTALL=/opt/emacsen
 
 #############################################################################
@@ -118,7 +118,17 @@ function compile_emacs ()
     local cppargs=""
     case $os in
         MacOS)
-            cppargs+="CPPFLAGS=-I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/libxml2";;
+            # For whatever reason, `configure' can't find libxml on it's own,
+            # _and_ it's location is constantly moving for me.
+            if ! locate libxml/tree.h|grep -F 'SDKs/MacOSX.sdk'; then
+                echo "Could not find libxml2-- the pre-requisites logic needs an update" >&2
+                exit 1
+            fi;
+            libxml2=$(locate libxml/tree.h|grep -F 'SDKs/MacOSX.sdk'|head -n1);
+            libxml2=$(dirname $libxml2);
+            libxml2=$(dirname $libxml2);
+            echo "Setting libxml2 to \"$libxml2\"";
+            cppargs+="CPPFLAGS=-I$libxml2";;
     esac
 
     cd $srcdir
@@ -126,15 +136,15 @@ function compile_emacs ()
     case $os in
         MacOS)
             (echo $PATH|grep -q /usr/local/opt/texinfo/bin)|| export PATH="/usr/local/opt/texinfo/bin:$PATH"
-            ./autogen.sh;
-            ./configure --with-ns $pfxarg $cppargs;
-            make bootstrap;
-            make;;
+            ./autogen.sh || exit 1;
+            ./configure --with-ns $pfxarg $cppargs || exit 1;
+            make bootstrap || exit 1;
+            make || exit 1;;
         Ubuntu|RHEL)
-            ./autogen.sh;
-            ./configure $pfxarg $cppargs;
-            make bootstrap;
-            make;;
+            ./autogen.sh || exit 1;
+            ./configure $pfxarg $cppargs || exit 1;
+            make bootstrap || exit 1;
+            make || exit 1;;
         *)
             echo "Internal error in compile_emacs." >&2;
             exit 1;;
