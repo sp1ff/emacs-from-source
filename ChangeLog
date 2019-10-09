@@ -1,0 +1,42 @@
+2019-10-09  Michael Herstine  <sp1ff@pobox.com>
+
+	Added a "just make" sub-command that doesn't update the source; it just builds & installs.
+
+2019-03-25  Michael Herstine  <sp1ff@pobox.com>
+
+	Changed `compile_emacs\' to automatically find libxml2 on MacOS
+
+2018-11-17  Michael Herstine  <sp1ff@pobox.com>
+
+	Added a new sub-command: `revert'
+
+2018-11-11  Michael Herstine  <sp1ff@pobox.com>
+
+	Version 1.0
+	This commit does the following:
+
+	  1. Assorted fixes improving error detection & reporting
+
+	  2. Supports Mojave when building for MacOS
+
+	  3. `install_emacs' would exit with status one even on
+	     success-- fixed
+
+	  4. Re-wrote the logic for branch & tag handling
+
+	  5. Added a new sub-command `make-current'
+
+2017-12-06  Michael Herstine  <sp1ff@pobox.com>
+
+	Fixed bug in print_aliases on MacOS.
+
+2017-12-04  Michael Herstine  <sp1ff@pobox.com>
+
+	Fixed typo in install_emacs.
+
+2017-12-03  Michael  <sp1ff@pobox.com>
+
+	Initial upload.
+	This is the initial commit of 'emacs-from-source'.
+
+	Initial commit

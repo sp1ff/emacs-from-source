@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copyright (C) 2017-2019 Michael Herstine <sp1ff@pobox.com>
-CE_VERSION=1.1.2
+CE_VERSION=1.2.0
 CE_INSTALL=/opt/emacsen
 
 #############################################################################
@@ -577,7 +577,8 @@ update options:
 update arguments:
 
   COMMIT (optional) checkout the given branch to a given commit (may not be given
-                    with --tag
+                    with --tag)
+
 Use this if you're maintaining a local git repo & continuously updating. IOW,
 you might run \`emacs-from-source boostrap -s /foo/bar/splat' once to set up
 your local repo, then repeatedly call \`emacs-from-source update -s
@@ -587,7 +588,7 @@ EOF
     fi
 
     if test -z "$up_srcdir"; then
-        echo "No --srcdir specified." >&2
+        echo "Update: No --srcdir specified." >&2
         exit 2
     fi
 
@@ -643,6 +644,119 @@ EOF
 
     compile_emacs . $up_install/$inst_name
     install_emacs $up_install $inst_name
+}
+
+function just_make()
+{
+    local mk_help=
+    local mk_install=$CE_INSTALL
+    local mk_prev_option=
+    local mk_srcdir=
+    local mk_tag=
+
+    local mk_option
+    for mk_option
+    do
+
+        # If the previous option required an argument, assign it now.
+        if test -n "$mk_prev_option"; then
+            eval $mk_prev_option=\$mk_option
+            mk_prev_option=
+            continue
+        fi
+
+        # Parse out the argument option, in $mk_option
+        case $mk_option in
+            *=?*) mk_optarg=$(expr "X$mk_option" : '[^=]*=\(.*\)') ;;
+            *=)   mk_optarg= ;;
+            *)    mk_optarg=yes ;;
+        esac
+
+        # Handle options here
+        case $mk_option in
+            -h | --he | --hel | --help)
+                mk_help=yes;;
+            -i | --in | --ins | --inst | --install)
+                mk_prev_option=mk_install;;
+            -i=* | --in=* | --ins=* | --inst=* | --install=*)
+                mk_install=$mk_optarg;;
+            -s | --srcdir | --src)
+                mk_prev_option=mk_srcdir;;
+            -s=* | --srcdir=* | --src=*)
+                mk_srcdir=$mk_optarg;;
+            -t | --tag)
+                mk_prev_option=mk_tag;;
+            -t=* | --tag=*)
+                mk_tag=$mk_optarg;;
+            *)
+                echo "unrecognized option: \`$mk_option'
+Try \`$0 make --help' for more information" >&2;
+                set +e;
+                exit 2;;
+        esac
+    done
+
+    if test "$mk_help" == "yes"; then
+        cat <<EOF
+\`$0 make' just makes an extant emacs checkout & installs it.
+
+Usage $0 make [OPTION]...
+
+update options:
+
+  -i, --install=INSTDIR   directory into which multiple Emacsen shall be installed
+  -s, --srcdir=DIRNAME    directory containing the Emacs source code (required)
+  -t, --tag=TAG           this branch wasn't checked out to HEAD; but was rather
+                          checked out to tag
+
+Use this if you've already updated & just want to re-build.
+
+TODO: Have this function figure out TAG for itself, rather than needing
+to be told.
+EOF
+        exit 0
+    fi
+
+    if test -z "$mk_srcdir"; then
+        echo "Make: No --srcdir specified." >&2
+        exit 2
+    fi
+
+    if ! test -d "$mk_srcdir"; then
+        echo "$mk_srcdir does not exist. Exiting." >&2
+        exit 2
+    fi
+
+    if test -z "$mk_install"; then
+        echo "No --install specified." >&2
+        exit 2
+    fi
+
+    if ! test -d "$mk_install"; then
+        echo "Install directory $mk_install does not exist." >&2
+    fi
+
+    set -e
+    cd "$mk_srcdir"
+    # https://stackoverflow.com/questions/6245570/how-to-get-the-current-branch-name-in-git?rq=1
+    mk_branch=`git branch | grep \* | cut -d ' ' -f2`
+    if test "$mk_branch" = "master"; then
+        mk_branch=""
+    fi
+
+    # TODO(sp1ff): Re-factor; this logic is shared with `bootstrap' & `update',
+    # but before I go to that trouble, I want to be sure this is the way I want
+    # to handle it (it seems inelegant to me).
+    local commit=$(git rev-parse HEAD)
+    local inst_name="$commit"
+    if test -n "$mk_tag"; then
+        inst_name="$mk_tag"
+    elif test -n "$mk_branch"; then
+        inst_name="$mk_branch-$commit"
+    fi
+
+    compile_emacs $mk_srcdir $mk_install/$inst_name
+    install_emacs $mk_install $inst_name
 }
 
 function make_current ()
@@ -854,7 +968,7 @@ Global options:
   -q, --quiet    display no output
   -V, --version  display version information and exit
 
-Sub-commands are: aliases, bootstrap, update, make-current & revert.
+Sub-commands are: aliases, bootstrap, update, make, make-current & revert.
 
 Run \`$0 COMMAND --help' for help on each sub-command.
 EOF
@@ -881,6 +995,8 @@ case $ce_cmd in
         update $@;;
     make-current)
         make_current $@;;
+    make)
+        just_make $@;;
     revert|fallback)
         revert_to_last $@;;
     *)

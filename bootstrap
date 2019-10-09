@@ -1,0 +1,3 @@
+#!/bin/sh
+ln -s README.md README
+autoreconf -vfi

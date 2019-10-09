@@ -1,2 +1,7 @@
 .vagrant
 ubuntu-xenial-16.04-cloudimg-console.log
+Makefile.in
+README
+aclocal.m4
+autom4te.cache
+configure
