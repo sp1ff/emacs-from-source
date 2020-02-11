@@ -1,7 +1,7 @@
 emacs-from-source
 =================
 
-This directory contains release 1.1.1 of `emacs-from-source`.
+This directory contains release 1.3.0 of `emacs-from-source`.
 
 See the file NEWS for user-visible changes from previous releases.
 

@@ -1,6 +1,17 @@
 emacs-from-source News -- history of user-visible changes.
 
-Copyright (C) 2017-2018 Michael Herstine <sp1ff@pobox.com>
+Copyright (C) 2017-2020 Michael Herstine <sp1ff@pobox.com>
+
+
+* Changes in emacs-from-source 1.3.0
+
+Updated the `alias' sub-command to alias ctags, ebrowse & etags.
+
+
+* Changes in emacs-from-source 1.2.0
+
+Added a "just make" sub-command that doesn't update the source; it
+just builds & installs.
 
 
 * Changes in emacs-from-source 1.1.1
@@ -12,7 +23,6 @@ the last "current" build. `emacs-from-source revert' will symlink to
 the last "current" build & create a new link "bad" pointing to the
 previous "current" build.
 
-
 * Changes in emacs-from-source 1.0.1
 
 ** Improved error handling

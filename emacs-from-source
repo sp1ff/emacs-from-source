@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Copyright (C) 2017-2019 Michael Herstine <sp1ff@pobox.com>
-CE_VERSION=1.2.0
+# Copyright (C) 2017-2020 Michael Herstine <sp1ff@pobox.com>
+CE_VERSION=1.3.0
 CE_INSTALL=/opt/emacsen
 
 #############################################################################
@@ -70,7 +70,8 @@ function install_pre_requisites ()
     echo "Installing pre-requisites...done." >&6
 }
 
-# print_alises: print alias statements for `emacs' & `emacsclient'
+# print_alises: print alias statements for the assorted programs installed with
+# Emacs
 # invoke as print_alises $install_dir $version
 function print_aliases ()
 {
@@ -87,9 +88,17 @@ function print_aliases ()
     fi
     case $os in
         MacOS)
-			echo alias emacs=$install_dir/$version/Emacs.app/Contents/MacOS/Emacs\;alias emacsclient=$install_dir/$version/Emacs.app/Contents/MacOS/bin/emacsclient;;
+			echo alias emacs=$install_dir/$version/Emacs.app/Contents/MacOS/Emacs\;\
+                 alias emacsclient=$install_dir/$version/Emacs.app/Contents/MacOS/bin/emacsclient\;\
+                 alias ctags=$install_dir/$version/Emacs.app/Contents/MacOS/etags\;\
+                 alias etags=$install_dir/$version/Emacs.app/Contents/MacOS/etags\;\
+                 alias ebrowse=$install_dir/$version/Emacs.app/Contents/MacOS/ebrowse;;
 		*)
-			echo alias emacs=$install_dir/$version/bin/emacs\; alias emacsclient=$install_dir/$version/bin/emacsclient;;
+			echo alias emacs=$install_dir/$version/bin/emacs\;\
+                 alias emacsclient=$install_dir/$version/bin/emacsclient\;\
+                 alias ctags=$install_dir/$version/bin/ctags\;\
+                 alias etags=$install_dir/$version/bin/etags\;\
+                 alias ebrowse=$install_dir/$version/bin/ebrowse;;
 	esac
 }
 

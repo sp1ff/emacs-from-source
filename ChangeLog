@@ -1,3 +1,7 @@
+2020-02-10  Michael Herstine  <sp1ff@pobox.com>
+
+	Adding ctags, ebrowse & etags to the `aliases' sub-command.
+
 2019-10-09  Michael Herstine  <sp1ff@pobox.com>
 
 	Added a "just make" sub-command that doesn't update the source; it just builds & installs.
