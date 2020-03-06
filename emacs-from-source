@@ -90,9 +90,9 @@ function print_aliases ()
         MacOS)
 			echo alias emacs=$install_dir/$version/Emacs.app/Contents/MacOS/Emacs\;\
                  alias emacsclient=$install_dir/$version/Emacs.app/Contents/MacOS/bin/emacsclient\;\
-                 alias ctags=$install_dir/$version/Emacs.app/Contents/MacOS/etags\;\
-                 alias etags=$install_dir/$version/Emacs.app/Contents/MacOS/etags\;\
-                 alias ebrowse=$install_dir/$version/Emacs.app/Contents/MacOS/ebrowse;;
+                 alias ctags=$install_dir/$version/Emacs.app/Contents/MacOS/bin/ctags\;\
+                 alias etags=$install_dir/$version/Emacs.app/Contents/MacOS/bin/etags\;\
+                 alias ebrowse=$install_dir/$version/Emacs.app/Contents/MacOS/bin/ebrowse;;
 		*)
 			echo alias emacs=$install_dir/$version/bin/emacs\;\
                  alias emacsclient=$install_dir/$version/bin/emacsclient\;\
